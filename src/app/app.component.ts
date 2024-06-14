@@ -76,32 +76,25 @@ function setUpStream() {
         console.log(value, 'value')
         return {r: value, g: value, b: value, a: 255};
       }
-      const mask = await bodySegmentation.toColoredMask(segmentation, valueToColor);
-      console.log(12)
-
-      // Draw the mask on the canvas
-      // @ts-ignore
-      const maskImageData = new ImageData(new Uint8ClampedArray(mask.data), width, height);
-      outputStreamElement.putImageData(maskImageData, 0, 0);
+      const mask = await bodySegmentation.toBinaryMask(segmentation);
       const frame = offScreenContext.getImageData(0, 0, width, height);
-      const pixels = frame.data;
-      console.log(2)
+      const pixelData = frame.data;
+      const maskPixels = new Uint8ClampedArray(mask.data)
 
-      // for (let i = 0; i < pixels.length; i += 4) {
-      //   if (pixels[i + 3] !== 255) { // if alpha is not 255 (opaque)
-      //     pixels[i] = 0;   // red
-      //     pixels[i + 1] = 0; // green
-      //     pixels[i + 2] = 0; // blue
-      //     pixels[i + 3] = 255; // alpha
-      //   }
-      // }
+      for (let i = 0; i < pixelData.length; i += 4) {
+        const maskIndex = i / 4;
+        if (maskPixels[maskIndex] === 0) {
+          pixelData[i] = pixelData[i + 1] = pixelData[i + 2] = pixelData[i + 3] = 0;
+          // pixelData[i] = pixelData[i + 1] = pixelData[i + 2] = 0;
+        }
+      }
 
       let coloredPart = await bodySegmentation.toBinaryMask(segmentation)
       let opacity = 1;
       let flipHorizontal = false;
       let maskBlurAmount = 0;
-      bodySegmentation.drawMask(outputStreamElement, frame, coloredPart, opacity, maskBlurAmount, flipHorizontal);
-      // outputStreamElement.putImageData(frame, 0, 0);
+      // bodySegmentation.drawMask(outputStreamElement, frame, mask, opacity, maskBlurAmount, flipHorizontal);
+      outputStreamElement.putImageData(frame, 0, 0);
       requestAnimationFrame(processVideo);
       console.log(3)
     }

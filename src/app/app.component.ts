@@ -12,7 +12,17 @@ export class AppComponent {
   constructor(private computerVisionService: ComputerVisionService) {
     setUpStream();
   }
+  ngAfterViewInit() {
+    //add image to background
+    const body = document.getElementsByTagName('body')[0];
+    body.style.backgroundImage = 'url(crown.1024.995.svg)';
+  }
+  ngOnInit() {
+  }
+  //@ts-ignore
+  cocoSsdModel = cocoSsd.load();
 }
+
 
 function setUpStream() {
   document.addEventListener('DOMContentLoaded', async () => {
@@ -60,8 +70,21 @@ function setUpStream() {
       console.error('Media devices not supported by this browser.');
     }
 
+    //@ts-ignore
+    let cocoSsdModel;
+
 
     async function processVideo() {
+      //@ts-ignore
+      if (!cocoSsdModel) {
+        //@ts-ignore
+        cocoSsdModel = await cocoSsd.load();
+      }
+
+
+      const predictions = await cocoSsdModel.detect(video).catch(console.error);
+      //@ts-ignore
+      const person = predictions.find(prediction => prediction.class === 'person');
       offScreenContext.drawImage(video, 0, 0, width, height);
       const imageData = offScreenContext.getImageData(0, 0, width, height);
       const segmentation = await segmenter.segmentPeople(imageData).catch(err => {
@@ -78,8 +101,6 @@ function setUpStream() {
       const frame = offScreenContext.getImageData(0, 0, width, height);
       const pixels = frame.data;
       const maskPixels = new Uint8ClampedArray(mask.data)
-      const topOfheadCoordinate = findTopOfHead(height, width, maskPixels);
-      console.log(topOfheadCoordinate, 'topOfheadCoordinate')
       debugger;
       console.log(pixels, 'pixels')
 
@@ -103,6 +124,32 @@ function setUpStream() {
       // coloredPart, maskImageData, opacity, maskBlurAmount, flipHorizontal);
       // outputStreamElement.putImageData(mask, 0, 0);
       outputStreamElement.putImageData(frame, 0, 0);
+
+
+      /// add crown
+      // const crownWidth = 1024;
+      // const crownHeight = 995;
+      if (person) {
+
+
+        const [personX, personY, personWidth, personHeight] = person.bbox;
+
+        const scaleDown = 0.1;
+        const crown = new Image();
+        //crown shrink to 100 by 100
+        // crown.height *= scaleDown;
+        // crown.width *= scaleDown;
+        crown.src = 'crown.1024.995.svg';
+
+        outputStreamElement.drawImage(crown, personX, personY, personWidth, personHeight);
+        // outputStreamElement.drawImage(crown, topOfheadCoordinate.x, topOfheadCoordinate.y, crown.width * scaleDown, crown.height * scaleDown)
+
+
+      }
+
+
+
+
       requestAnimationFrame(processVideo);
       console.log(3)
     }
@@ -111,11 +158,12 @@ function setUpStream() {
 
 
 function findTopOfHead(height: number, width: number, mask: Uint8ClampedArray): {y: number, x: number} {
-  let topOfHead = {y: height / 2, x: width / 2};
+  let topOfHead = {y: 0, x: width / 2};
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const index = (y * width + x) * 4;
-      if (mask[index + 2] !== 0 && y > topOfHead.y) {
+      const isMask = mask[index + 2] !== 0;
+      if (isMask && y > topOfHead.y) {
         topOfHead = {y, x};
       }
     }

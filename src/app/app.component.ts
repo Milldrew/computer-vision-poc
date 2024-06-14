@@ -72,34 +72,54 @@ function setUpStream() {
       if (!segmentation || Array.isArray(segmentation) && segmentation.length === 0) {
         throw new Error('No person detected');
       }
-      function valueToColor(value: number): Color {
-        console.log(value, 'value')
-        return {r: value, g: value, b: value, a: 255};
-      }
-      const mask = await bodySegmentation.toBinaryMask(segmentation);
-      const frame = offScreenContext.getImageData(0, 0, width, height);
-      const pixelData = frame.data;
-      const maskPixels = new Uint8ClampedArray(mask.data)
+      const mask = await bodySegmentation.toBinaryMask(segmentation)
 
-      for (let i = 0; i < pixelData.length; i += 4) {
-        const maskIndex = i / 4;
-        if (maskPixels[maskIndex] === 0) {
-          pixelData[i] = pixelData[i + 1] = pixelData[i + 2] = pixelData[i + 3] = 0;
-          // pixelData[i] = pixelData[i + 1] = pixelData[i + 2] = 0;
+      debugger;
+      const frame = offScreenContext.getImageData(0, 0, width, height);
+      const pixels = frame.data;
+      const maskPixels = new Uint8ClampedArray(mask.data)
+      const topOfheadCoordinate = findTopOfhead(height, width, maskPixels);
+      console.log(topOfheadCoordinate, 'topOfheadCoordinate')
+      debugger;
+      console.log(pixels, 'pixels')
+
+      for (let redIndex = 0; redIndex < pixels.length; redIndex += 4) {
+        if (maskPixels[redIndex + 3] === 0) {
+        } else {
+          pixels[redIndex] = 0;
+          pixels[redIndex + 1] = 0;
+          pixels[redIndex + 2] = 0;
+          pixels[redIndex + 3] = 0;
+          pixels[redIndex + 3] = 255;
+
         }
       }
 
-      let coloredPart = await bodySegmentation.toBinaryMask(segmentation)
+      let coloredPart = document.getElementById('canvas');
       let opacity = 1;
       let flipHorizontal = false;
       let maskBlurAmount = 0;
-      // bodySegmentation.drawMask(outputStreamElement, frame, mask, opacity, maskBlurAmount, flipHorizontal);
+      // const combineFrameAndMask = bodySegmentation.drawMask(outputStreamElement,
+      // coloredPart, maskImageData, opacity, maskBlurAmount, flipHorizontal);
+      // outputStreamElement.putImageData(mask, 0, 0);
       outputStreamElement.putImageData(frame, 0, 0);
       requestAnimationFrame(processVideo);
       console.log(3)
     }
   });
+}
 
 
-
+function findTopOfhead(height: number, width: number, mask: Uint8ClampedArray): {y: number, x: number} {
+  let topOfHead = {y: height / 2, x: width / 2};
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const index = (y * width + x) * 4;
+      if (mask[index + 3] !== 0 && y < topOfHead.y) {
+        topOfHead = {y, x};
+      }
+    }
+  }
+  console.log(topOfHead, 'topOfHead')
+  return topOfHead;
 }

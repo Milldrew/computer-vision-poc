@@ -78,7 +78,7 @@ function setUpStream() {
       const frame = offScreenContext.getImageData(0, 0, width, height);
       const pixels = frame.data;
       const maskPixels = new Uint8ClampedArray(mask.data)
-      const topOfheadCoordinate = findTopOfhead(height, width, maskPixels);
+      const topOfheadCoordinate = findTopOfHead(height, width, maskPixels);
       console.log(topOfheadCoordinate, 'topOfheadCoordinate')
       debugger;
       console.log(pixels, 'pixels')
@@ -110,12 +110,12 @@ function setUpStream() {
 }
 
 
-function findTopOfhead(height: number, width: number, mask: Uint8ClampedArray): {y: number, x: number} {
+function findTopOfHead(height: number, width: number, mask: Uint8ClampedArray): {y: number, x: number} {
   let topOfHead = {y: height / 2, x: width / 2};
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       const index = (y * width + x) * 4;
-      if (mask[index + 3] !== 0 && y < topOfHead.y) {
+      if (mask[index + 2] !== 0 && y > topOfHead.y) {
         topOfHead = {y, x};
       }
     }

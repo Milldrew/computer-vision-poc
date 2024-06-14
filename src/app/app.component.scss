@@ -9,7 +9,7 @@
 
 video,
 canvas {
-  display: block;
+  display: none;
   width: 80%;
   max-width: 600px;
   border: 2px solid #ccc;
@@ -25,4 +25,10 @@ canvas {
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
+}
+
+h1 {
+  margin-top: 20px;
+  font-family: 'Roboto', sans-serif;
+  font-weight: 300;
 }

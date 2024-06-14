@@ -14,8 +14,8 @@ export class AppComponent {
   }
   ngAfterViewInit() {
     //add image to background
-    const body = document.getElementsByTagName('body')[0];
-    body.style.backgroundImage = 'url(crown.1024.995.svg)';
+    // const body = document.getElementsByTagName('body')[0];
+    // body.style.backgroundImage = 'url(crown.1024.995.svg)';
   }
   ngOnInit() {
   }
@@ -106,10 +106,11 @@ function setUpStream() {
 
       for (let redIndex = 0; redIndex < pixels.length; redIndex += 4) {
         if (maskPixels[redIndex + 3] === 0) {
+          pixels[redIndex + 3] *= 0.9;
         } else {
           pixels[redIndex] = 255;
-          pixels[redIndex + 1] = 200;
-          pixels[redIndex + 2] = 200;
+          pixels[redIndex + 1] = 255;
+          pixels[redIndex + 2] = 255;
           pixels[redIndex + 3] = 255;
           // pixels[redIndex + 3] = 255;
 
@@ -141,6 +142,8 @@ function setUpStream() {
         crown.height *= scaleDown;
         const crownX = personX + personWidth / 2 - crown.width / 2;
         const crownY = personY - crown.height + 35;
+        // crown.width += personWidth;
+        // crown.height += personWidth
 
         outputStreamElement.drawImage(crown, crownX, crownY, crown.width, crown.height);
         // outputStreamElement.drawImage(crown, topOfheadCoordinate.x, topOfheadCoordinate.y, crown.width * scaleDown, crown.height * scaleDown)

@@ -107,11 +107,11 @@ function setUpStream() {
       for (let redIndex = 0; redIndex < pixels.length; redIndex += 4) {
         if (maskPixels[redIndex + 3] === 0) {
         } else {
-          pixels[redIndex] = 0;
-          pixels[redIndex + 1] = 0;
-          pixels[redIndex + 2] = 0;
-          pixels[redIndex + 3] = 0;
+          pixels[redIndex] = 255;
+          pixels[redIndex + 1] = 200;
+          pixels[redIndex + 2] = 200;
           pixels[redIndex + 3] = 255;
+          // pixels[redIndex + 3] = 255;
 
         }
       }
@@ -136,12 +136,13 @@ function setUpStream() {
 
         const scaleDown = 0.1;
         const crown = new Image();
-        //crown shrink to 100 by 100
-        // crown.height *= scaleDown;
-        // crown.width *= scaleDown;
         crown.src = 'crown.1024.995.svg';
+        crown.width *= scaleDown;
+        crown.height *= scaleDown;
+        const crownX = personX + personWidth / 2 - crown.width / 2;
+        const crownY = personY - crown.height + 35;
 
-        outputStreamElement.drawImage(crown, personX, personY, personWidth, personHeight);
+        outputStreamElement.drawImage(crown, crownX, crownY, crown.width, crown.height);
         // outputStreamElement.drawImage(crown, topOfheadCoordinate.x, topOfheadCoordinate.y, crown.width * scaleDown, crown.height * scaleDown)
 
 
@@ -157,17 +158,3 @@ function setUpStream() {
 }
 
 
-function findTopOfHead(height: number, width: number, mask: Uint8ClampedArray): {y: number, x: number} {
-  let topOfHead = {y: 0, x: width / 2};
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const index = (y * width + x) * 4;
-      const isMask = mask[index + 2] !== 0;
-      if (isMask && y > topOfHead.y) {
-        topOfHead = {y, x};
-      }
-    }
-  }
-  console.log(topOfHead, 'topOfHead')
-  return topOfHead;
-}

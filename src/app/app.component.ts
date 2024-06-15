@@ -12,6 +12,7 @@ import * as cocoSsd from '@tensorflow-models/coco-ssd';
 export class AppComponent {
   constructor(private computerVisionService: ComputerVisionService) {
   }
+  isLoading = true;
   //@ts-ignore
   cocoSsdModel;
   cocoSsdModelLoaded = false;
@@ -59,6 +60,9 @@ export class AppComponent {
     //@ts-ignore
     let cocoSsdModel;
 
+    setTimeout(() => {
+      this.isLoading = false;
+    }, 2000);
     async function processVideo(cocoSsdModel: any) {
       requestAnimationFrame(() => processVideo(cocoSsdModel));
       if (!cocoSsdModel) {

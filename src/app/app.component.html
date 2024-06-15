@@ -1,8 +1,12 @@
 <h1>Computer Vison Proof of Concept</h1>
-<h3>This will take a while to load</h3>
+<div *ngIf="isLoading" id="loading-div">
+  <h4>Loading... </h4>
+  <div class="spinner-grow text-light" role="status">
+  </div>
+</div>
 <video id="video" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
-<canvas id="output"></canvas>
+<canvas id="output" [hidden]="isLoading"></canvas>
 <section>
   <p>
     This is an app built with tensorflow and opencv to remove the background from a video feed and place a crown on the

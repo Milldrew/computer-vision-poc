@@ -83,6 +83,7 @@ export class AppComponent {
       const maskPixels = new Uint8ClampedArray(mask.data)
       convertPixelsUsingMask(pixels, maskPixels);
 
+
       outputStreamElement.putImageData(frame, 0, 0);
       if (person) {
         addCrownToPerson(person, outputStreamElement);
@@ -136,6 +137,8 @@ function addCrownToPerson(person: any, outputStreamElement: CanvasRenderingConte
   crown.width *= scaleDown;
   crown.height *= scaleDown;
   const crownX = personX + personWidth / 2 - crown.width / 2;
+  crown.width += personWidth * 0.1;
+  crown.height += personWidth * 0.1;
   const crownY = personY - crown.height + 35;
 
   outputStreamElement.drawImage(crown, crownX, crownY, crown.width, crown.height);

@@ -13,7 +13,12 @@ export class AppComponent {
   constructor(private computerVisionService: ComputerVisionService) {
   }
   //@ts-ignore
-  cocoSsdModel = cocoSsd.load();
+  cocoSsdModel;
+  cocoSsdModelLoaded = false;
+  async ngAfterContentInit() {
+    this.cocoSsdModel = await cocoSsd.load();
+    this.cocoSsdModelLoaded = true;
+  }
   async ngAfterViewInit() {
     const width = 640;
     const height = 480;
@@ -27,30 +32,37 @@ export class AppComponent {
     };
     const segmenter = await bodySegmentation.createSegmenter(model, segmenterConfig);
     // Check if the browser supports media devices
+    //@ts-ignore
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-      // Access the user's camera and stream video
-      navigator.mediaDevices.getUserMedia({video: true, audio: false})
-        .then(stream => {
-          //@ts-ignore
-          video.srcObject = stream;
-          //@ts-ignore
-          video.play();
-          processVideo();
-        })
-        .catch(err => {
-          console.error('Error accessing media devices.', err);
-          alert('Error accessing media devices. Please grant access to your camera.')
-        });
+
+      //@ts-ignore
+      getMedia(video).then(() => {
+        processVideo(this.cocoSsdModel);
+      }).catch(err => {
+        console.error('Error accessing media devices.', err);
+        alert(`${err}`)
+      })
     } else {
+      alert('media devices not supported')
       console.error('Media devices not supported by this browser.');
+      //@ts-ignore
+      getMedia(video).then(() => {
+        processVideo(this.cocoSsdModel);
+      }).catch(err => {
+        console.error('Error accessing media devices.', err);
+        alert(`${err}`)
+      })
+
+
     }
+
     //@ts-ignore
     let cocoSsdModel;
-    async function processVideo() {
-      //@ts-ignore
+
+    async function processVideo(cocoSsdModel: any) {
+      requestAnimationFrame(() => processVideo(cocoSsdModel));
       if (!cocoSsdModel) {
-        //@ts-ignore
-        cocoSsdModel = await cocoSsd.load();
+        return;
       }
 
       //@ts-ignore
@@ -70,11 +82,11 @@ export class AppComponent {
       const pixels = frame.data;
       const maskPixels = new Uint8ClampedArray(mask.data)
       convertPixelsUsingMask(pixels, maskPixels);
+
       outputStreamElement.putImageData(frame, 0, 0);
       if (person) {
         addCrownToPerson(person, outputStreamElement);
       }
-      requestAnimationFrame(processVideo);
     }
   }
 }
@@ -91,6 +103,7 @@ function getElementsAndContexts(width: number, height: number) {
   video.width = canvas.width = output.width = width;
   //@ts-ignore
   video.height = canvas.height = output.height = height;
+
   return {video, canvas, output, offScreenContext, outputStreamElement};
 
 }
@@ -132,4 +145,24 @@ async function createPerson(cocoSsdModel: any, video: HTMLVideoElement, offScree
   const predictions = await cocoSsdModel.detect(video).catch(console.error);
   //@ts-ignore
   return predictions.find(prediction => prediction.class === 'person');
+}
+async function getMedia(video: HTMLVideoElement) {
+  const constraints = {
+    audio: false,
+    video: {
+      facingMode: 'user'
+    }
+  }
+  return new Promise((resolve, reject) => {
+    navigator.mediaDevices.getUserMedia(constraints)
+      .then(stream => {
+        video.srcObject = stream;
+        video.play();
+        resolve(video);
+      })
+      .catch(err => {
+        console.error('Error accessing media devices.', err);
+        reject(err);
+      });
+  });
 }

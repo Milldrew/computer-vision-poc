@@ -13,8 +13,8 @@ export class AppComponent {
   constructor(private computerVisionService: ComputerVisionService) {
   }
   isLoading = true;
-  //@ts-ignore
-  cocoSsdModel;
+
+  cocoSsdModel: cocoSsd.ObjectDetection;
   cocoSsdModelLoaded = false;
   async ngAfterContentInit() {
     this.cocoSsdModel = await cocoSsd.load();
@@ -23,6 +23,8 @@ export class AppComponent {
   async ngAfterViewInit() {
     const width = 640;
     const height = 480;
+    // const width = 160;
+    // const height = 120;
     const {video, canvas, output, offScreenContext, outputStreamElement} = getElementsAndContexts(width, height)
 
 
@@ -63,74 +65,49 @@ export class AppComponent {
     setTimeout(() => {
       this.isLoading = false;
     }, 2000);
-    async function processVideo(cocoSsdModel: any) {
-      requestAnimationFrame(() => processVideo(cocoSsdModel));
+    async function processVideo(cocoSsdModel: cocoSsd.ObjectDetection) {
       if (!cocoSsdModel) {
+        requestAnimationFrame(() => processVideo(cocoSsdModel));
         return;
       }
 
-      //@ts-ignore
-      const person = await createPerson(cocoSsdModel, video, offScreenContext);
+      const person = await createPerson(cocoSsdModel, video, offScreenContext) as cocoSsd.DetectedObject;
 
       offScreenContext.drawImage(video, 0, 0, width, height);
-      const imageData = offScreenContext.getImageData(0, 0, width, height);
-      const segmentation = await segmenter.segmentPeople(imageData).catch(err => {
-        console.error('Error segmenting people.', err);
-      })
-      if (!segmentation || Array.isArray(segmentation) && segmentation.length === 0) {
-        throw new Error('No person detected');
-      }
-      const mask = await bodySegmentation.toBinaryMask(segmentation)
 
       const frame = offScreenContext.getImageData(0, 0, width, height);
-      const pixels = frame.data;
-      const maskPixels = new Uint8ClampedArray(mask.data)
-      convertPixelsUsingMask(pixels, maskPixels);
-
-
+      if (person) {
+        removeTheBackground(frame, person);
+      }
       outputStreamElement.putImageData(frame, 0, 0);
+
       if (person) {
         addCrownToPerson(person, outputStreamElement);
       }
+
+
+      requestAnimationFrame(() => processVideo(cocoSsdModel));
     }
   }
 }
 
 function getElementsAndContexts(width: number, height: number) {
-  const video = document.getElementById('video');
-  const canvas = document.getElementById('canvas');
-  const output = document.getElementById('output');
-  //@ts-ignore
-  const offScreenContext = canvas.getContext('2d');
-  //@ts-ignore
-  const outputStreamElement = output.getContext('2d');
-  //@ts-ignore
+  const video = document.getElementById('video') as HTMLVideoElement;
+  const canvas = document.getElementById('canvas') as HTMLCanvasElement;
+  const output = document.getElementById('output') as HTMLCanvasElement;
+  const offScreenContext = canvas.getContext('2d',
+    {
+      willReadFrequently: true
+    }
+  ) as CanvasRenderingContext2D;
+  const outputStreamElement = output.getContext('2d') as CanvasRenderingContext2D;
   video.width = canvas.width = output.width = width;
-  //@ts-ignore
   video.height = canvas.height = output.height = height;
 
   return {video, canvas, output, offScreenContext, outputStreamElement};
 
 }
 
-function convertPixelsUsingMask(pixels: Uint8ClampedArray, maskPixels: Uint8ClampedArray) {
-  for (let redIndex = 0; redIndex < pixels.length; redIndex += 4) {
-    if (maskPixels[redIndex + 3] === 0) {
-      pixels[redIndex + 3] *= 0.9;
-    } else {
-      pixels[redIndex] = 0;
-      pixels[redIndex + 1] = 0;
-      pixels[redIndex + 2] = 0;
-      pixels[redIndex + 3] = 255;
-      // pixels[redIndex] = 255;
-      // pixels[redIndex + 1] = 255;
-      // pixels[redIndex + 2] = 255;
-      // pixels[redIndex + 3] = 255;
-      // pixels[redIndex + 3] = 255;
-
-    }
-  }
-}
 
 function addCrownToPerson(person: any, outputStreamElement: CanvasRenderingContext2D) {
   const [personX, personY, personWidth, personHeight] = person.bbox;
@@ -148,9 +125,13 @@ function addCrownToPerson(person: any, outputStreamElement: CanvasRenderingConte
   outputStreamElement.drawImage(crown, crownX, crownY, crown.width, crown.height);
 }
 
-async function createPerson(cocoSsdModel: any, video: HTMLVideoElement, offScreenContext: CanvasRenderingContext2D) {
+async function createPerson(cocoSsdModel: cocoSsd.ObjectDetection, video: HTMLVideoElement, offScreenContext: CanvasRenderingContext2D) {
   const predictions = await cocoSsdModel.detect(video).catch(console.error);
-  //@ts-ignore
+  if (!predictions || predictions.length === 0) {
+    return;
+  }
+  predictions
+  debugger;
   return predictions.find(prediction => prediction.class === 'person');
 }
 async function getMedia(video: HTMLVideoElement) {
@@ -172,4 +153,17 @@ async function getMedia(video: HTMLVideoElement) {
         reject(err);
       });
   });
+}
+
+function removeTheBackground(frame: ImageData, person: cocoSsd.DetectedObject) {
+  const [personX, personY, personWidth, personHeight] = person.bbox;
+  const frameData = frame.data;
+  for (let i = 0; i < frameData.length; i += 4) {
+    const x = i / 4 % frame.width;
+    const y = i / 4 / frame.width;
+    const isPerson = x > personX && x < personX + personWidth && y > personY && y < personY + personHeight
+    if (!isPerson) {
+      frameData[i + 3] = 20;
+    }
+  }
 }

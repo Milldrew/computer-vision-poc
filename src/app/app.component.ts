@@ -77,7 +77,7 @@ export class AppComponent {
 
       const frame = offScreenContext.getImageData(0, 0, width, height);
       if (person) {
-        removeTheBackground(frame, person);
+        // removeTheBackground(frame, person);
       }
       outputStreamElement.putImageData(frame, 0, 0);
 

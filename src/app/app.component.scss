@@ -23,8 +23,8 @@ canvas {
   border: 2px solid #ccc;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  width: $width;
-  height: $height;
+  // width: $width;
+  // height: $height;
 }
 
 #output {
@@ -36,12 +36,13 @@ canvas {
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
   // transform: scaleX(-1);
-  width: $width;
-  height: $height;
+  // width: $width;
+  // height: $height;
 }
 
 h1,
 h4 {
+  text-align: center;
   margin-top: 20px;
   font-family: 'Roboto', sans-serif;
   font-weight: 300;
@@ -69,7 +70,7 @@ p {
   width: 600px;
   display: flex;
   flex-direction: row;
-  justify-content: flex-start;
+  justify-content: center;
   align-items: center;
 }
 

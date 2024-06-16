@@ -20,8 +20,6 @@ canvas {
   border: 2px solid #ccc;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-  // width: $width;
-  // height: $height;
 }
 
 #output {
@@ -32,9 +30,7 @@ canvas {
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
-  // transform: scaleX(-1);
-  // width: $width;
-  // height: $height;
+  transform: scaleX(-1);
 }
 
 h1,
@@ -75,6 +71,14 @@ p {
   margin-left: 20px;
 }
 
+@media (max-height: 600px) {
+  h1 {
+    font-size: 20px;
+    padding-top: 600px;
+    min-height: 700px;
+  }
+}
+
 @media (max-width: 600px) {
   h1 {
     font-size: 20px;
@@ -83,13 +87,6 @@ p {
   }
 }
 
-@media (max-height: 600px) {
-  h1 {
-    font-size: 20px;
-    padding-top: 600px;
-    min-height: 700px;
-  }
-}
 
 input {
   margin: .4rem;

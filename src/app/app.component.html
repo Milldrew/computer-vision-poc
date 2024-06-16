@@ -7,13 +7,15 @@
 <video id="video" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
 <canvas id="output" [hidden]="isLoading"></canvas>
+<label>Opacity</label>
+<input type="range" id="opacity-slider" min="0" max="255" [(ngModel)]="opacity"
+  (change)="handleOpacityChange($event)" />
 <section>
-  <p>
-    This is a app was built with tenserflow's javaScript library, it runs completely in the browser.
-  <p>
-    It was built very quickly in about a day, and is not fine tuned at all.
-    I was able to create some "better" versions but they used to much memory, and I am not willing to spend any more
-    time on this project.
-  </p>
-  <p>Thank You, for trying it out</p>
-</section>
+  <section>
+    <p>
+      This is a app was built with tenserflow's javaScript library, it runs completely in the browser.
+    <p>
+      It was built very quickly in about a day, and is not fine tuned at all.
+    </p>
+    <p>Thank You, for trying it out</p>
+  </section>

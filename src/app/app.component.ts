@@ -12,6 +12,16 @@ import * as cocoSsd from '@tensorflow-models/coco-ssd';
 export class AppComponent {
   constructor(private computerVisionService: ComputerVisionService) {
   }
+  opacity: number = 255;
+  videoDIO: {
+    opacity: number;
+  } = {
+      opacity: 255
+    }
+  handleOpacityChange(event: Event) {
+    this.videoDIO.opacity = this.opacity;
+
+  }
   isLoading = true;
 
   cocoSsdModel: cocoSsd.ObjectDetection;
@@ -21,8 +31,6 @@ export class AppComponent {
     this.cocoSsdModelLoaded = true;
   }
   async ngAfterViewInit() {
-    // const width = 320;
-    // const height = 240;
     const width = 200;
     const height = 150;
     const {video, canvas, output, offScreenContext, outputStreamElement} = getElementsAndContexts(width, height)
@@ -41,7 +49,7 @@ export class AppComponent {
 
       //@ts-ignore
       getMedia(video).then(() => {
-        processVideo(this.cocoSsdModel);
+        processVideo(this.cocoSsdModel, this.videoDIO);
       }).catch(err => {
         console.error('Error accessing media devices.', err);
         alert(`${err}`)
@@ -51,7 +59,7 @@ export class AppComponent {
       console.error('Media devices not supported by this browser.');
       //@ts-ignore
       getMedia(video).then(() => {
-        processVideo(this.cocoSsdModel);
+        processVideo(this.cocoSsdModel, this.videoDIO);
       }).catch(err => {
         console.error('Error accessing media devices.', err);
         alert(`${err}`)
@@ -66,9 +74,9 @@ export class AppComponent {
     setTimeout(() => {
       this.isLoading = false;
     }, 2000);
-    async function processVideo(cocoSsdModel: cocoSsd.ObjectDetection) {
+    async function processVideo(cocoSsdModel: cocoSsd.ObjectDetection, videoDIO: AppComponent['videoDIO']) {
       if (!cocoSsdModel) {
-        requestAnimationFrame(() => processVideo(cocoSsdModel));
+        requestAnimationFrame(() => processVideo(cocoSsdModel, videoDIO))
         return;
       }
       const offScreenImageData = offScreenContext.getImageData(0, 0, width, height);
@@ -90,7 +98,7 @@ export class AppComponent {
       offScreenContext.drawImage(video, 0, 0, width, height);
 
       const frame = offScreenContext.getImageData(0, 0, width, height);
-      useMask(frame, mask);
+      useMask(frame, mask, videoDIO);
       if (person) {
         // removeTheBackground(frame, person);
       }
@@ -101,7 +109,7 @@ export class AppComponent {
       }
 
 
-      requestAnimationFrame(() => processVideo(cocoSsdModel));
+      requestAnimationFrame(() => processVideo(cocoSsdModel, videoDIO))
     }
   }
 }
@@ -127,7 +135,6 @@ function getElementsAndContexts(width: number, height: number) {
 function addCrownToPerson(person: any, outputStreamElement: CanvasRenderingContext2D) {
   const [personX, personY, personWidth, personHeight] = person.bbox;
 
-  console.log(`personX: ${personX}, personY: ${personY}, personWidth: ${personWidth}, personHeight: ${personHeight}`)
   const scaleDown = 0.04;
   const crown = new Image();
   crown.src = 'crown.1024.995.svg';
@@ -140,7 +147,6 @@ function addCrownToPerson(person: any, outputStreamElement: CanvasRenderingConte
   const putOnHead = 10;
   crownX = personX + personWidth / 2 - crown.width / 2;
   crownY = personY - crown.height + putOnHead;
-  console.log(`crownX: ${crownX}, crownY: ${crownY}`)
 
 
 
@@ -190,13 +196,13 @@ function removeTheBackground(frame: ImageData, person: cocoSsd.DetectedObject) {
     }
   }
 }
-function useMask(frame: ImageData, mask: ImageData) {
+function useMask(frame: ImageData, mask: ImageData, videoDIO: AppComponent['videoDIO']) {
   const frameData = frame.data;
   const maskData = mask.data;
   for (let i = 0; i < frameData.length; i += 4) {
     const isBody = maskData[i + 3] === 0;
     if (!isBody) {
-      frameData[i + 3] = 0;
+      frameData[i + 3] = 255 - videoDIO.opacity;
     }
   }
 }

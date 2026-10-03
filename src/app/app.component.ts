@@ -1,208 +1,132 @@
-import {Component} from '@angular/core';
-import {ComputerVisionService} from './computer-vision.service';
+import { Component, NgZone, OnDestroy } from '@angular/core';
 import * as bodySegmentation from '@tensorflow-models/body-segmentation';
-import {Color} from '@tensorflow-models/body-segmentation/dist/body_pix/impl/types';
 import * as cocoSsd from '@tensorflow-models/coco-ssd';
+
+type State = 'idle' | 'loading' | 'running' | 'no-camera' | 'denied' | 'unsupported' | 'error';
+
+/** Processing size. 320x240 is sharp at the 600px display width and still fast. */
+const WIDTH = 320;
+const HEIGHT = 240;
+/**
+ * Person detection (COCO-SSD) is the expensive model and a person's box moves
+ * slowly, so it runs every few frames and the last box is reused in between.
+ * Segmentation still runs every frame, so the cut-out stays tight.
+ */
+const DETECT_EVERY = 6;
 
 @Component({
   selector: 'app-root',
   templateUrl: './app.component.html',
-  styleUrl: './app.component.scss'
+  styleUrl: './app.component.scss',
 })
-export class AppComponent {
-  constructor(private computerVisionService: ComputerVisionService) {
+export class AppComponent implements OnDestroy {
+  state: State = 'idle';
+  /** 255 hides the background completely; lower lets it show through. */
+  opacity = 255;
+
+  private stream?: MediaStream;
+  private running = false;
+  private crown = new Image();
+
+  constructor(private zone: NgZone) {
+    // Load the crown once, up front. (It used to be created - and drawn before
+    // it had loaded, at zero size - on every frame, so it never appeared.)
+    this.crown.src = 'crown.1024.995.svg';
   }
-  opacity: number = 255;
-  videoDIO: {
-    opacity: number;
-  } = {
-      opacity: 255
+
+  /** Runs only when the visitor asks: no camera prompt on page load. */
+  async start() {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      this.state = 'unsupported';
+      return;
     }
-  handleOpacityChange(event: Event) {
-    this.videoDIO.opacity = this.opacity;
-
+    this.state = 'loading';
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        audio: false,
+        video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+      });
+    } catch (err: any) {
+      this.state = err?.name === 'NotAllowedError' ? 'denied' : err?.name === 'NotFoundError' ? 'no-camera' : 'error';
+      return;
+    }
+    try {
+      const [segmenter, detector] = await Promise.all([
+        bodySegmentation.createSegmenter(bodySegmentation.SupportedModels.MediaPipeSelfieSegmentation, {
+          runtime: 'tfjs',
+        }),
+        cocoSsd.load({ base: 'lite_mobilenet_v2' }),
+      ]);
+      const video = document.getElementById('video') as HTMLVideoElement;
+      video.srcObject = this.stream;
+      await video.play();
+      this.state = 'running';
+      this.running = true;
+      // The frame loop needs no change detection; keep it outside Angular.
+      this.zone.runOutsideAngular(() => this.loop(video, segmenter, detector));
+    } catch (err) {
+      console.error(err);
+      this.stop();
+      this.state = 'error';
+    }
   }
-  isLoading = true;
 
-  cocoSsdModel: cocoSsd.ObjectDetection;
-  cocoSsdModelLoaded = false;
-  async ngAfterContentInit() {
-    this.cocoSsdModel = await cocoSsd.load();
-    this.cocoSsdModelLoaded = true;
+  stop() {
+    this.running = false;
+    this.stream?.getTracks().forEach((t) => t.stop());
+    this.stream = undefined;
+    this.state = 'idle';
   }
-  async ngAfterViewInit() {
-    const width = 200;
-    const height = 150;
-    const {video, canvas, output, offScreenContext, outputStreamElement} = getElementsAndContexts(width, height)
 
+  ngOnDestroy() {
+    this.stop();
+  }
 
-    const model = bodySegmentation.SupportedModels.MediaPipeSelfieSegmentation;
-    const segmenterConfig: bodySegmentation.MediaPipeSelfieSegmentationTfjsModelConfig
-      = {
+  private async loop(video: HTMLVideoElement, segmenter: bodySegmentation.BodySegmenter, detector: cocoSsd.ObjectDetection) {
+    const work = document.getElementById('canvas') as HTMLCanvasElement;
+    const output = document.getElementById('output') as HTMLCanvasElement;
+    work.width = output.width = WIDTH;
+    work.height = output.height = HEIGHT;
+    const workCtx = work.getContext('2d', { willReadFrequently: true })!;
+    const outCtx = output.getContext('2d')!;
+    let frameNo = 0;
+    let person: cocoSsd.DetectedObject | undefined;
 
-      runtime: 'tfjs',
+    const tick = async () => {
+      if (!this.running) return;
+      // Current frame first, then every model looks at that same frame.
+      workCtx.drawImage(video, 0, 0, WIDTH, HEIGHT);
+      const frame = workCtx.getImageData(0, 0, WIDTH, HEIGHT);
+      const segmentation = await segmenter.segmentPeople(frame, { flipHorizontal: false });
+      const mask = await bodySegmentation.toBinaryMask(segmentation);
+      if (frameNo++ % DETECT_EVERY === 0) {
+        const found = await detector.detect(work, 3);
+        person = found.find((p) => p.class === 'person' && p.score > 0.5);
+      }
+      hideBackground(frame, mask, this.opacity);
+      outCtx.putImageData(frame, 0, 0);
+      if (person) drawCrown(outCtx, this.crown, person.bbox);
+      requestAnimationFrame(tick);
     };
-    const segmenter = await bodySegmentation.createSegmenter(model, segmenterConfig);
-    // Check if the browser supports media devices
-    //@ts-ignore
-    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-
-      //@ts-ignore
-      getMedia(video).then(() => {
-        processVideo(this.cocoSsdModel, this.videoDIO);
-      }).catch(err => {
-        console.error('Error accessing media devices.', err);
-        alert(`${err}`)
-      })
-    } else {
-      alert('media devices not supported')
-      console.error('Media devices not supported by this browser.');
-      //@ts-ignore
-      getMedia(video).then(() => {
-        processVideo(this.cocoSsdModel, this.videoDIO);
-      }).catch(err => {
-        console.error('Error accessing media devices.', err);
-        alert(`${err}`)
-      })
-
-
-    }
-
-    //@ts-ignore
-    let cocoSsdModel;
-
-    setTimeout(() => {
-      this.isLoading = false;
-    }, 2000);
-    async function processVideo(cocoSsdModel: cocoSsd.ObjectDetection, videoDIO: AppComponent['videoDIO']) {
-      if (!cocoSsdModel) {
-        requestAnimationFrame(() => processVideo(cocoSsdModel, videoDIO))
-        return;
-      }
-      const offScreenImageData = offScreenContext.getImageData(0, 0, width, height);
-      const segmentation = await segmenter.segmentPeople(offScreenImageData, {
-        internalResolution: 'medium',
-        flipHorizontal: false,
-        segmentationThreshold: 0.7
-      });
-
-      const mask = await bodySegmentation.toBinaryMask(segmentation)
-
-
-
-
-      // const person = await createPerson(cocoSsdModel, video, offScreenContext) as cocoSsd.DetectedObject;
-      //@ts-ignore
-      const person = await createPerson(cocoSsdModel, canvas, offScreenContext) as cocoSsd.DetectedObject;
-
-      offScreenContext.drawImage(video, 0, 0, width, height);
-
-      const frame = offScreenContext.getImageData(0, 0, width, height);
-      useMask(frame, mask, videoDIO);
-      if (person) {
-        // removeTheBackground(frame, person);
-      }
-      outputStreamElement.putImageData(frame, 0, 0);
-
-      if (person) {
-        addCrownToPerson(person, outputStreamElement);
-      }
-
-
-      requestAnimationFrame(() => processVideo(cocoSsdModel, videoDIO))
-    }
+    requestAnimationFrame(tick);
   }
 }
 
-function getElementsAndContexts(width: number, height: number) {
-  const video = document.getElementById('video') as HTMLVideoElement;
-  const canvas = document.getElementById('canvas') as HTMLCanvasElement;
-  const output = document.getElementById('output') as HTMLCanvasElement;
-  const offScreenContext = canvas.getContext('2d',
-    {
-      willReadFrequently: true
-    }
-  ) as CanvasRenderingContext2D;
-  const outputStreamElement = output.getContext('2d') as CanvasRenderingContext2D;
-  video.width = canvas.width = output.width = width;
-  video.height = canvas.height = output.height = height;
-
-  return {video, canvas, output, offScreenContext, outputStreamElement};
-
-}
-
-
-function addCrownToPerson(person: any, outputStreamElement: CanvasRenderingContext2D) {
-  const [personX, personY, personWidth, personHeight] = person.bbox;
-
-  const scaleDown = 0.04;
-  const crown = new Image();
-  crown.src = 'crown.1024.995.svg';
-  crown.width *= scaleDown;
-  crown.height *= scaleDown;
-  // const crownX = personX + personWidth / 2 - crown.width / 2;
-  // const crownY = personY - crown.height;
-  let crownX = 100;
-  let crownY = 100;
-  const putOnHead = 10;
-  crownX = personX + personWidth / 2 - crown.width / 2;
-  crownY = personY - crown.height + putOnHead;
-
-
-
-
-  outputStreamElement.drawImage(crown, crownX, crownY, crown.width, crown.height);
-}
-
-async function createPerson(cocoSsdModel: cocoSsd.ObjectDetection, video: HTMLVideoElement, offScreenContext: CanvasRenderingContext2D) {
-  const predictions = await cocoSsdModel.detect(video).catch(console.error);
-  if (!predictions || predictions.length === 0) {
-    return;
-  }
-  predictions
-  debugger;
-  return predictions.find(prediction => prediction.class === 'person');
-}
-async function getMedia(video: HTMLVideoElement) {
-  const constraints = {
-    audio: false,
-    video: {
-      facingMode: 'user'
-    }
-  }
-  return new Promise((resolve, reject) => {
-    navigator.mediaDevices.getUserMedia(constraints)
-      .then(stream => {
-        video.srcObject = stream;
-        video.play();
-        resolve(video);
-      })
-      .catch(err => {
-        console.error('Error accessing media devices.', err);
-        reject(err);
-      });
-  });
-}
-
-function removeTheBackground(frame: ImageData, person: cocoSsd.DetectedObject) {
-  const [personX, personY, personWidth, personHeight] = person.bbox;
-  const frameData = frame.data;
-  for (let i = 0; i < frameData.length; i += 4) {
-    const x = i / 4 % frame.width;
-    const y = i / 4 / frame.width;
-    const isPerson = x > personX && x < personX + personWidth && y > personY && y < personY + personHeight
-    if (!isPerson) {
-      frameData[i + 3] = 20;
-    }
+/** Fades every pixel the mask marks as background, by the slider's amount. */
+function hideBackground(frame: ImageData, mask: ImageData, opacity: number) {
+  const f = frame.data;
+  const m = mask.data;
+  for (let i = 0; i < f.length; i += 4) {
+    if (m[i + 3] !== 0) f[i + 3] = 255 - opacity;
   }
 }
-function useMask(frame: ImageData, mask: ImageData, videoDIO: AppComponent['videoDIO']) {
-  const frameData = frame.data;
-  const maskData = mask.data;
-  for (let i = 0; i < frameData.length; i += 4) {
-    const isBody = maskData[i + 3] === 0;
-    if (!isBody) {
-      frameData[i + 3] = 255 - videoDIO.opacity;
-    }
-  }
+
+/** Sits the crown on the top of the person's box, about half its width. */
+function drawCrown(ctx: CanvasRenderingContext2D, crown: HTMLImageElement, bbox: number[]) {
+  if (!crown.complete || !crown.naturalWidth) return;
+  const [x, y, w] = bbox;
+  const width = w * 0.5;
+  const height = width * (crown.naturalHeight / crown.naturalWidth);
+  // The box's top is the top of the head; sink the crown into the hair a little.
+  ctx.drawImage(crown, x + w / 2 - width / 2, Math.max(0, y - height * 0.75), width, height);
 }

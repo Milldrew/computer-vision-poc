@@ -1,24 +1,49 @@
 <h1>Computer Vision Proof of Concept</h1>
-<div *ngIf="isLoading" id="loading-div">
-  <h4>Loading... </h4>
-  <div class="spinner-grow text-light" role="status">
-  </div>
-</div>
+<p class="lede">
+  Removes the background behind you and crowns you, live, using two TensorFlow.js
+  models running entirely in your browser. Nothing leaves your device.
+</p>
+
 <video id="video" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
-<canvas id="output" [hidden]="isLoading"></canvas>
-<ng-container *ngIf="!isLoading">
-  <label>Opacity</label>
-  <input type="range" id="opacity-slider" min="0" max="255" [(ngModel)]="opacity"
-    (change)="handleOpacityChange($event)" />
-</ng-container>
+<canvas id="output" [hidden]="state !== 'running'" aria-label="Your camera, with the background removed"></canvas>
+
+<div class="panel" [ngSwitch]="state" aria-live="polite">
+  <ng-container *ngSwitchCase="'idle'">
+    <button type="button" class="btn btn-light btn-lg" (click)="start()">Start camera</button>
+    <p class="small">Your browser will ask to use the camera.</p>
+  </ng-container>
+  <div *ngSwitchCase="'loading'" id="loading-div">
+    <h4>Loading the models…</h4>
+    <div class="spinner-grow text-light" role="status"></div>
+  </div>
+  <ng-container *ngSwitchCase="'running'">
+    <label for="opacity-slider">Hide the background</label>
+    <input type="range" id="opacity-slider" min="0" max="255" [(ngModel)]="opacity" />
+    <button type="button" class="btn btn-outline-light btn-sm" (click)="stop()">Stop camera</button>
+  </ng-container>
+  <ng-container *ngSwitchCase="'no-camera'">
+    <p>No camera was found on this device. Try it on a laptop or a phone.</p>
+    <button type="button" class="btn btn-light" (click)="start()">Try again</button>
+  </ng-container>
+  <ng-container *ngSwitchCase="'denied'">
+    <p>Camera access was blocked. Allow it for this site in your browser's settings, then try again.</p>
+    <button type="button" class="btn btn-light" (click)="start()">Try again</button>
+  </ng-container>
+  <ng-container *ngSwitchCase="'unsupported'">
+    <p>This browser cannot share a camera with web pages.</p>
+  </ng-container>
+  <ng-container *ngSwitchCase="'error'">
+    <p>Something went wrong starting the camera or loading the models.</p>
+    <button type="button" class="btn btn-light" (click)="start()">Try again</button>
+  </ng-container>
+</div>
+
 <section>
-  <section>
-    <p>You must have a camera connected to your device for this app to work.</p>
-    <p>
-      This is a app was built with tenserflow's JavaScript library, it runs completely in the browser.
-    <p>
-      It was built very quickly in about a day, and is not fine tuned at all.
-    </p>
-    <p>Thank You, for trying it out</p>
-  </section>
+  <p>
+    <b>How it works.</b> MediaPipe selfie segmentation decides, pixel by pixel,
+    what is you and what is background. COCO-SSD finds the box around the person,
+    and the crown sits on top of it. Both models are TensorFlow.js, on your GPU
+    where available.
+  </p>
+</section>

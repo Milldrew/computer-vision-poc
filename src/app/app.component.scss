@@ -1,36 +1,32 @@
 :host {
-  overflow: scroll;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  height: 100%;
-  width: 100vw;
+  /* 100% and min-height, not 100vw + overflow: scroll - that put a sideways
+     scrollbar on every phone. */
+  width: 100%;
+  min-height: 100vh;
+  padding: 0 16px 32px;
+  box-sizing: border-box;
   background-color: #000;
   color: #fff;
   margin: 0px;
-  // background-image: url('./crown.1024.995.svg');
 }
 
 video,
 canvas {
   display: none;
-  width: 80%;
-  max-width: 600px;
-  border: 2px solid #ccc;
-  border-radius: 10px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
 }
 
 #output {
   display: block;
-  width: 80%;
+  width: 100%;
   max-width: 600px;
   border: 2px solid #ccc;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   margin-top: 20px;
-  transform: scaleX(-1);
+  transform: scaleX(-1); /* a mirror, like a selfie camera */
 }
 
 h1,
@@ -41,53 +37,43 @@ h4 {
   font-weight: 300;
 }
 
+h1 {
+  font-size: clamp(1.6rem, 6vw, 2.5rem);
+}
+
+.lede {
+  max-width: 600px;
+  text-align: center;
+  color: #ccc;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+  max-width: 600px;
+  text-align: center;
+
+  input[type='range'] {
+    width: min(320px, 80vw);
+  }
+  .small {
+    font-size: 0.85rem;
+    color: #aaa;
+    margin: 0;
+  }
+}
+
 section {
   background-color: #020202;
   padding: 10px;
   max-width: 600px;
   letter-spacing: 1.3px;
   line-height: 1.5;
-
 }
 
 p {
   font-family: 'Roboto', sans-serif;
-  white-space-trim: pre-wrap;
-  white-space: pre-line;
-  ;
-
-}
-
-
-#loading-div {
-  width: 600px;
-  display: flex;
-  flex-direction: row;
-  justify-content: center;
-  align-items: center;
-}
-
-[role="status"] {
-  margin-left: 20px;
-}
-
-@media (max-height: 600px) {
-  h1 {
-    font-size: 20px;
-    padding-top: 50px;
-    min-height: 70px;
-  }
-}
-
-@media (max-width: 600px) {
-  h1 {
-    font-size: 20px;
-    padding-top: 50px;
-    min-height: 70px;
-  }
-}
-
-
-input {
-  margin: .4rem;
 }

@@ -1,8 +1,15 @@
 <h1>Computer Vision Proof of Concept</h1>
 <p class="lede">
-  Removes the background behind you and crowns you, live, using two TensorFlow.js
-  models running entirely in your browser. Nothing leaves your device.
+  Turn on your camera, and this app removes the background behind you and puts
+  a crown on your head, live. Your video never leaves your device.
 </p>
+
+<!-- What it does, for anyone who has not (or cannot) turn a camera on. -->
+<figure class="example" *ngIf="state !== 'running'">
+  <img src="example-before-after.jpg" width="1040" height="411"
+       alt="Example: on the left, a photo of a man as the camera sees it. On the right, the app's output: the background removed and a jeweled crown on his head." />
+  <figcaption>Example result. Photo from Unsplash.</figcaption>
+</figure>
 
 <video id="video" autoplay playsinline muted></video>
 <canvas id="canvas"></canvas>
@@ -41,9 +48,8 @@
 
 <section>
   <p>
-    <b>How it works.</b> MediaPipe selfie segmentation decides, pixel by pixel,
-    what is you and what is background. COCO-SSD finds the box around the person,
-    and the crown sits on top of it. Both models are TensorFlow.js, on your GPU
-    where available.
+    <b>How it works.</b> Two AI models run in your browser. One decides which
+    pixels are you and which are background. The other finds where you are in
+    the picture, so the crown lands on your head.
   </p>
 </section>

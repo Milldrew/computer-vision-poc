@@ -77,3 +77,20 @@ section {
 p {
   font-family: 'Roboto', sans-serif;
 }
+
+.example {
+  margin: 8px 0 0;
+  max-width: 600px;
+  width: 100%;
+  text-align: center;
+  img {
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+  }
+  figcaption {
+    margin-top: 6px;
+    font-size: 0.8rem;
+    color: #999;
+  }
+}
